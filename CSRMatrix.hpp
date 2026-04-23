@@ -114,9 +114,14 @@ public:
             }
             if (indices_[k] > j) {
                 // Need to insert at position k
+                // Optimize: reserve space first to reduce reallocations
+                indices_.reserve(nnz + 1);
+                data_.reserve(nnz + 1);
+                
                 indices_.insert(indices_.begin() + k, j);
                 data_.insert(data_.begin() + k, value);
                 ++nnz;
+                
                 // Update indptr for all subsequent rows
                 for (size_t r = i + 1; r <= n_rows; ++r) {
                     ++indptr_[r];
@@ -126,9 +131,13 @@ public:
         }
         
         // Insert at end of row
+        indices_.reserve(nnz + 1);
+        data_.reserve(nnz + 1);
+        
         indices_.insert(indices_.begin() + end, j);
         data_.insert(data_.begin() + end, value);
         ++nnz;
+        
         for (size_t r = i + 1; r <= n_rows; ++r) {
             ++indptr_[r];
         }
@@ -185,6 +194,11 @@ public:
     CSRMatrix getRowSlice(size_t l, size_t r) const {
         if (l > r || r > n_rows) {
             throw invalid_index();
+        }
+        
+        if (l == r) {
+            // Empty slice - return empty matrix
+            return CSRMatrix(0, n_cols);
         }
         
         size_t new_rows = r - l;
